@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>OpenClaw - AI Agent Control Center</title>
+    <style>
+        :root {
+            /* Light Mode Colors */
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F8FAFC;
+            --bg-tertiary: #F1F5F9;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --text-muted: #94A3B8;
+            --claw-orange: #FF6B35;
+            --claw-orange-light: #FF8555;
+            --success: #22C55E;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --info: #3B82F6;
+            --online: #22C55E;
+            --offline: #94A3B8;
+            --border: #E2E8F0;
+            --shadow: rgba(0,0,0,0.1);
+            --shadow-lg: rgba(0,0,0,0.15);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0F172A;
+                --bg-secondary: #1E293B;
+                --bg-tertiary: #334155;
+                --text-primary: #F8FAFC;
+                --text-secondary: #CBD5E1;
+                --text-muted: #64748B;
+                --claw-orange: #FF6B35;
+                --claw-orange-light: #FF8555;
+                --success: #22C55E;
+                --warning: #F59E0B;
+                --error: #EF4444;
+                --info: #3B82F6;
+                --online: #22C55E;
+                --offline: #64748B;
+                --border: #334155;
+                --shadow: rgba(0,0,0,0.3);
+                --shadow-lg: rgba(0,0,0,0.4);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background: var(--bg-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Main App Container */
+        .app-container {
+            height: calc(100vh - 44px - 70px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Screen Management */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease-in-out;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .screen.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Header */
+        .screen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .screen-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-button {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-button:hover {
+            background: var(--bg-tertiary);
+            transform: translateY(-1px);
+        }
+
+        /* SVG Icons */
+        .icon {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .icon-lg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-xl {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        /* Agent Status */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .agent-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .agent-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .agent-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--claw-orange), var(--claw-orange-light));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .agent-details h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .agent-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--online);
+        }
+
+        .status-indicator.offline {
+            background: var(--offline);
+        }
+
+        /* Tool Grid */
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tool-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--claw-orange);
+        }
+
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .tool-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        .tool-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .tool-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Tab Bar */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+        }
+
+        .tab-item.active {
+            color: var(--claw-orange);
+        }
+
+        .tab-item:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        /* Progress bars */
+        .progress-container {
+            margin: 16px 0;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #16a34a);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Process List */
+        .process-list {
+            space-y: 12px;
+        }
+
+        .process-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .process-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .process-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .process-meta {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .process-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .process-action {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .process-action:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            height: calc(100% - 80px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            space-y: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .message.agent {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--claw-orange);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .message-content {
+            flex: 1;
+            max-width: 70%;
+        }
+
+        .message-bubble {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 12px 16px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.agent .message-bubble {
+            background: var(--claw-orange);
+            color: white;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        .chat-input {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-textbox {
+            flex: 1;
+            min-height: 40px;
+            max-height: 120px;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-textbox:focus {
+            border-color: var(--claw-orange);
+        }
+
+        .send-button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: var(--claw-orange);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .send-button:hover {
+            background: var(--claw-orange-light);
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .screen {
+                padding: 16px;
+            }
+            
+            .agent-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tool-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-left">
+            <span>OpenClaw</span>
+            <div class="status-indicator"></div>
+        </div>
+        <div class="status-right">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            <svg class="icon" viewBox="0 0 24 24">
+                <rect x="1" y="5" width="22" height="14" rx="7" ry="7"/>
+                <path d="m9 9 5 3-5 3z"/>
+            </svg>
+            <span>100%</span>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Dashboard Screen -->
+        <div class="screen active" id="dashboard">
+            <div class="screen-header">
+                <h1 class="screen-title">OpenClaw Control</h1>
+                <div class="header-actions">
+                    <button class="action-button">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Agent Status Grid -->
+            <div class="agent-grid">
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div class="agent-info">
+                            <div class="agent-avatar">Z</div>
+                            <div class="agent-details">
+                                <h3>Zera</h3>
+                                <div class="agent-status">
+                                    <div class="status-indicator"></div>
+                                    <span>Building</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-subtitle">Main Builder & Developer</div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Unity App</span>
+                            <span>85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div class="agent-info">
+                            <div class="agent-avatar">Y</div>
+                            <div class="agent-details">
+                                <h3>Yacob</h3>
+                                <div class="agent-status">
+                                    <div class="status-indicator"></div>
+                                    <span>Deploying</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-subtitle">Infrastructure & Deployment</div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Deployment</span>
+                            <span>60%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 60%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <div class="agent-info">
+                            <div class="agent-avatar">A</div>
+                            <div class="agent-details">
+                                <h3>Aman</h3>
+                                <div class="agent-status">
+                                    <div class="status-indicator"></div>
+                                    <span>Research</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-subtitle">Research & Development</div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Analysis</span>
+                            <span>92%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Screen -->
+        <div class="screen" id="tools">
+            <div class="screen-header">
+                <h1 class="screen-title">OpenClaw Tools</h1>
+                <div class="header-actions">
+                    <button class="action-button">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="1"/>
+                            <circle cx="19" cy="12" r="1"/>
+                            <circle cx="5" cy="12" r="1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tool-grid">
+                <div class="tool-card" onclick="executeCommand('exec')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">exec</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Execute shell commands with full PTY support</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('browser')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">browser</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Control web browser via OpenClaw browser server</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('sessions_spawn')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">sessions_spawn</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Spawn sub-agent sessions for complex tasks</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('canvas')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="9" cy="9" r="2"/>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">canvas</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Control node canvases and A2UI interfaces</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('nodes')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <path d="M5 12s2.545-5 7-5c4.454 0 7 5 7 5s-2.546 5-7 5c-4.455 0-7-5-7-5z"/>
+                                <path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+                                <path d="M21 17v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/>
+                                <path d="M21 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">nodes</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Discover and control paired nodes</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('cron')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12,6 12,12 16,14"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">cron</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Manage cron jobs and wake events</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('message')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">message</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Send messages and channel actions</div>
+                </div>
+
+                <div class="tool-card" onclick="executeCommand('web_search')">
+                    <div class="tool-header">
+                        <div class="tool-icon">
+                            <svg class="icon icon-lg" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="tool-title">web_search</div>
+                        </div>
+                    </div>
+                    <div class="tool-description">Search the web using Brave Search API</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processes Screen -->
+        <div class="screen" id="processes">
+            <div class="screen-header">
+                <h1 class="screen-title">Active Processes</h1>
+                <div class="header-actions">
+                    <button class="action-button" onclick="refreshProcesses()">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M21 3v5h-5"/>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                            <path d="M8 16H3v5"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="process-list" id="processList">
+                <div class="process-item">
+                    <div class="process-header">
+                        <div class="process-info">
+                            <h4>Unity App Development</h4>
+                            <div class="process-meta">Zera • Started 2h ago</div>
+                        </div>
+                        <div class="process-actions">
+                            <button class="process-action">Logs</button>
+                            <button class="process-action">Stop</button>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Building components...</span>
+                            <span>85%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 85%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="process-item">
+                    <div class="process-header">
+                        <div class="process-info">
+                            <h4>Infrastructure Deployment</h4>
+                            <div class="process-meta">Yacob • Started 1h ago</div>
+                        </div>
+                        <div class="process-actions">
+                            <button class="process-action">Logs</button>
+                            <button class="process-action">Stop</button>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Deploying to illicit.finance...</span>
+                            <span>60%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 60%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="process-item">
+                    <div class="process-header">
+                        <div class="process-info">
+                            <h4>Market Research Analysis</h4>
+                            <div class="process-meta">Aman • Started 3h ago</div>
+                        </div>
+                        <div class="process-actions">
+                            <button class="process-action">Logs</button>
+                            <button class="process-action">Stop</button>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Analyzing 74GB dataset...</span>
+                            <span>92%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 92%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Screen -->
+        <div class="screen" id="chat">
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message">
+                        <div class="message-avatar">Y</div>
+                        <div class="message-content">
+                            <div class="message-bubble">
+                                Unity app updates starting - replacing fake apps with real OpenClaw tools!
+                            </div>
+                            <div class="message-time">2:35 PM</div>
+                        </div>
+                    </div>
+
+                    <div class="message agent">
+                        <div class="message-avatar">Z</div>
+                        <div class="message-content">
+                            <div class="message-bubble">
+                                Perfect! Implementing SVG icons and real tool integration now. ETA: 45 minutes.
+                            </div>
+                            <div class="message-time">2:36 PM</div>
+                        </div>
+                    </div>
+
+                    <div class="message">
+                        <div class="message-avatar">A</div>
+                        <div class="message-content">
+                            <div class="message-bubble">
+                                Standing by for validation testing of the real OpenClaw capabilities showcase!
+                            </div>
+                            <div class="message-time">2:37 PM</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <div class="input-container">
+                        <textarea class="chat-textbox" placeholder="Message agents..." rows="1"></textarea>
+                        <button class="send-button">
+                            <svg class="icon" viewBox="0 0 24 24">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22,2 15,22 11,13 2,9"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div class="screen" id="settings">
+            <div class="screen-header">
+                <h1 class="screen-title">Settings</h1>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg class="icon icon-lg" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="m12 1 2.09 7.26L22 10.27l-7.91-1.01L12 1z"/>
+                        <path d="M7 12H1l6.91 2.26L9.09 22 7 12z"/>
+                        <path d="m21.74 16.85-1.4.7-3.2-2.2"/>
+                    </svg>
+                    OpenClaw Configuration
+                </div>
+                <div class="card-subtitle">System and agent settings</div>
+
+                <div style="margin-top: 20px;">
+                    <div style="margin-bottom: 16px;">
+                        <strong>Gateway Status:</strong>
+                        <span style="margin-left: 8px; padding: 4px 8px; background: var(--success); color: white; border-radius: 4px; font-size: 12px;">Online</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <strong>Active Agents:</strong>
+                        <span style="margin-left: 8px;">Zera, Yacob, Aman</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <strong>Model:</strong>
+                        <span style="margin-left: 8px;">anthropic/claude-sonnet-4-20250514</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <strong>Platform:</strong>
+                        <span style="margin-left: 8px;">Linux x64</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <svg class="icon icon-lg" viewBox="0 0 24 24">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                    Theme Settings
+                </div>
+                <div class="card-subtitle">Appearance and display options</div>
+
+                <div style="margin-top: 20px;">
+                    <button class="action-button" onclick="toggleTheme()" style="width: 100%;">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        Auto (System)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <div class="tab-item active" onclick="switchScreen('dashboard')">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+            <div class="tab-label">Dashboard</div>
+        </div>
+        
+        <div class="tab-item" onclick="switchScreen('tools')">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <div class="tab-label">Tools</div>
+        </div>
+        
+        <div class="tab-item" onclick="switchScreen('processes')">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/>
+            </svg>
+            <div class="tab-label">Processes</div>
+        </div>
+        
+        <div class="tab-item" onclick="switchScreen('chat')">
+            <svg class="icon" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <div class="tab-label">Chat</div>
+        </div>
+        
+        <div class="tab-item" onclick="switchScreen('settings')">
+            <svg class="icon" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1m17-4a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 21a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+            </svg>
+            <div class="tab-label">Settings</div>
+        </div>
+    </div>
+
+    <script>
+        // Screen management
+        function switchScreen(screenId) {
+            // Remove active from all screens and tabs
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Activate target screen and tab
+            document.getElementById(screenId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // Tool execution
+        function executeCommand(tool) {
+            alert(`Executing OpenClaw tool: ${tool}\n\nThis would integrate with the actual OpenClaw tool system to run commands.`);
+        }
+
+        // Process management
+        function refreshProcesses() {
+            // Simulate refresh
+            const processList = document.getElementById('processList');
+            processList.style.opacity = '0.5';
+            setTimeout(() => {
+                processList.style.opacity = '1';
+            }, 500);
+        }
+
+        // Theme management
+        function toggleTheme() {
+            // This would integrate with actual theme switching
+            alert('Theme switching would integrate with OpenClaw\'s configuration system');
+        }
+
+        // Chat functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const textarea = document.querySelector('.chat-textbox');
+            const sendButton = document.querySelector('.send-button');
+
+            function adjustTextareaHeight() {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+
+            textarea.addEventListener('input', adjustTextareaHeight);
+            textarea.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            sendButton.addEventListener('click', sendMessage);
+
+            function sendMessage() {
+                const message = textarea.value.trim();
+                if (message) {
+                    // Add message to chat
+                    addMessage(message, true);
+                    textarea.value = '';
+                    adjustTextareaHeight();
+                    
+                    // Simulate agent response
+                    setTimeout(() => {
+                        addMessage("Message received! OpenClaw integration would handle this through the actual message tool.", false);
+                    }, 1000);
+                }
+            }
+
+            function addMessage(text, isUser) {
+                const messagesContainer = document.getElementById('chatMessages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'agent' : ''}`;
+                
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">${isUser ? 'U' : 'C'}</div>
+                    <div class="message-content">
+                        <div class="message-bubble">${text}</div>
+                        <div class="message-time">${timeStr}</div>
+                    </div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        });
+
+        // Live updates simulation
+        function updateProgress() {
+            const progressBars = document.querySelectorAll('.progress-fill');
+            progressBars.forEach(bar => {
+                const currentWidth = parseInt(bar.style.width);
+                if (currentWidth < 100) {
+                    const newWidth = Math.min(currentWidth + Math.random() * 2, 100);
+                    bar.style.width = newWidth + '%';
+                    
+                    // Update percentage text
+                    const label = bar.closest('.progress-container').querySelector('.progress-label span:last-child');
+                    if (label) {
+                        label.textContent = Math.round(newWidth) + '%';
+                    }
+                }
+            });
+        }
+
+        // Update progress every 3 seconds
+        setInterval(updateProgress, 3000);
+
+        // Add touch feedback for mobile
+        document.querySelectorAll('.tool-card, .action-button, .process-action, .tab-item').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>
